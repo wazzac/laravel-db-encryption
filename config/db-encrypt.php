@@ -12,7 +12,15 @@ return [
     ],
 
     // Define the DB encryption key. Will be used to encrypt and decrypt data.
-    'key' => env('DB_ENCRYPTION_KEY'),
+    // ------------------------------------------------------------
+    'key' => env('DB_ENCRYPT_KEY'),
+
+    // Local database Primary key format
+    // Options: 'int' (default) or 'uuid'
+    // ------------------------------------------------------------
+    'db' => [
+        'primary_key_format' => env('DB_ENCRYPT_DB_PRIMARY_KEY_FORMAT', 'int'), // int or uuid (36)
+    ],
 
     // ... more to follow
 
