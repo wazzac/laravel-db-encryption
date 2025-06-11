@@ -1,6 +1,6 @@
 <?php
 
-namespace Wazzac\DbEncrypt\Helper;
+namespace Wazza\DbEncrypt\Helper;
 
 use RuntimeException;
 use InvalidArgumentException;

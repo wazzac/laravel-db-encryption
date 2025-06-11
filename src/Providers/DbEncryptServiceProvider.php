@@ -42,6 +42,25 @@ class DbEncryptServiceProvider extends BaseServiceProvider
         $this->app->singleton(DnEncryptController::class, function () {
             return new DnEncryptController();
         });
+
+        /*
+        You can use the above registered singleton service in your application like this:
+        $dnEncryptController = app(DnEncryptController::class);
+        $dnEncryptController->someMethod();
+
+        You can also use dependency injection in your controllers or other services.
+        For example:
+        public function __construct(DnEncryptController $dnEncryptController)
+        {
+            $this->dnEncryptController = $dnEncryptController;
+        }
+
+        This allows you to access the methods of DnEncryptController within your class.
+        You can also register other services or bindings as needed.
+        $this->app->bind('some.service', function ($app) {
+            return new SomeService();
+        });
+        */
     }
 
     /**
