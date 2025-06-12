@@ -3,7 +3,7 @@
 namespace Wazza\DbEncrypt\Providers;
 
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
-use Wazza\DbEncrypt\Http\Controllers\DnEncryptController;
+use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
 
 class DbEncryptServiceProvider extends BaseServiceProvider
 {
@@ -39,23 +39,23 @@ class DbEncryptServiceProvider extends BaseServiceProvider
         );
 
         // Register the singleton service the package provides.
-        $this->app->singleton(DnEncryptController::class, function () {
-            return new DnEncryptController();
+        $this->app->singleton(DbEncryptController::class, function () {
+            return new DbEncryptController();
         });
 
         /*
         You can use the above registered singleton service in your application like this:
-        $dnEncryptController = app(DnEncryptController::class);
+        $dnEncryptController = app(DbEncryptController::class);
         $dnEncryptController->someMethod();
 
         You can also use dependency injection in your controllers or other services.
         For example:
-        public function __construct(DnEncryptController $dnEncryptController)
+        public function __construct(DbEncryptController $dnEncryptController)
         {
             $this->dnEncryptController = $dnEncryptController;
         }
 
-        This allows you to access the methods of DnEncryptController within your class.
+        This allows you to access the methods of DbEncryptController within your class.
         You can also register other services or bindings as needed.
         $this->app->bind('some.service', function ($app) {
             return new SomeService();
