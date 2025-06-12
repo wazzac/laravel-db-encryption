@@ -2,59 +2,23 @@
 
 namespace Wazza\DbEncrypt\Traits;
 
-use Wazza\DbEncrypt\Http\Controllers\DnEncryptController;
+use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
 
 /**
  * Include this trait in your model to enable database encryption functionality.
  *
- * public function save(array $options = [])
- * {
- *     parent::save($options);
- *     // Call the encryptAttributes method to encrypt the model's attributes.
- *     $this->encryptAttributes();
- * }
+ * Note: You do NOT need to override the save() method or manually call encryptAttributes().
+ * Encryption and decryption are handled automatically via model events by this trait.
+ * Be sure to add the `encryptedProperties` array to your model to specify which attributes should be encrypted.
  */
 trait HasEncryptedAttributes
 {
     /**
-     * Encrypt the model's attributes using the DnEncryptController.
+     * Buffer for temporarily holding encrypted attributes during save.
      *
-     * @return void
+     * @var array
      */
-    public function encryptAttributes(): void
-    {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The encryptAttributes method can only be called from an Eloquent model instance.');
-        }
-
-        // Initiate a database encryption process
-        $dnEncryptController = app(DnEncryptController::class);
-        $dnEncryptController->setModel($model);
-        $dnEncryptController->encrypt();
-    }
-
-    /**
-     * Decrypt the model's attributes using the DnEncryptController.
-     *
-     * @return void
-     */
-    public function decryptAttributes(): void
-    {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The decryptAttributes method can only be called from an Eloquent model instance.');
-        }
-
-        // Initiate a database decryption process
-        $dnEncryptController = app(DnEncryptController::class);
-        $dnEncryptController->setModel($model);
-        $dnEncryptController->decrypt();
-    }
+    protected array $_encryptedAttributesBuffer = [];
 
     /**
      * Get the encryption status of the model's attributes.
@@ -71,92 +35,76 @@ trait HasEncryptedAttributes
         }
 
         // Check if the model's attributes are encrypted
-        $dnEncryptController = app(DnEncryptController::class);
+        $dnEncryptController = app(DbEncryptController::class);
         return $dnEncryptController->isEncrypted($model);
     }
 
     /**
-     * Decrypt the model's attributes before saving.
-     *
-     * @param array $options
-     * @return void
+     * Boot the HasEncryptedAttributes trait for a model.
+     * Automatically handles loading and saving encrypted attributes.
      */
-    public function save(array $options = []): void
+    public static function bootHasEncryptedAttributes()
     {
-        // Decrypt the attributes before saving
-        $this->decryptAttributes();
-
-        // Call the parent save method
-        parent::save($options);
-
-        // Encrypt the attributes after saving
-        $this->encryptAttributes();
+        static::retrieved(function ($model) {
+            $model->loadEncryptedAttributes();
+        });
+        static::saving(function ($model) {
+            $model->extractEncryptedAttributesForSave();
+        });
+        static::saved(function ($model) {
+            $model->saveEncryptedAttributes();
+        });
     }
 
     /**
-     * Delete the model and its encrypted attributes.
-     *
-     * @return void
+     * Load and decrypt encrypted attributes from the encrypted_attributes table.
      */
-    public function delete(): void
+    public function loadEncryptedAttributes(): void
     {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The delete method can only be called from an Eloquent model instance.');
+        if (!property_exists($this, 'encryptedProperties') || empty($this->encryptedProperties)) {
+            return;
         }
-
-        // Delete the encrypted attributes using the DnEncryptController
-        $dnEncryptController = app(DnEncryptController::class);
-        $dnEncryptController->deleteEncryptedAttributes($model);
-
-        // Call the parent delete method
-        parent::delete();
+        $dnEncryptController = app(\Wazza\DbEncrypt\Http\Controllers\DbEncryptController::class);
+        $dnEncryptController->setModel($this);
+        $dnEncryptController->decrypt();
     }
 
     /**
-     * Restore the model and its encrypted attributes.
-     *
-     * @return void
+     * Remove encrypted attributes from the model's attributes before saving.
+     * Store them temporarily for later encryption.
      */
-    public function restore(): void
+    public function extractEncryptedAttributesForSave(): void
     {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The restore method can only be called from an Eloquent model instance.');
+        if (!property_exists($this, 'encryptedProperties') || empty($this->encryptedProperties)) {
+            return;
         }
-
-        // Restore the encrypted attributes using the DnEncryptController
-        $dnEncryptController = app(DnEncryptController::class);
-        $dnEncryptController->restoreEncryptedAttributes($model);
-
-        // Call the parent restore method
-        parent::restore();
+        $this->_encryptedAttributesBuffer = [];
+        foreach ($this->encryptedProperties as $prop) {
+            if (array_key_exists($prop, $this->attributes)) {
+                $this->_encryptedAttributesBuffer[$prop] = $this->attributes[$prop];
+                unset($this->attributes[$prop]);
+            }
+        }
     }
 
     /**
-     * Force delete the model and its encrypted attributes.
-     *
-     * @return void
+     * Encrypt and save the encrypted attributes to the encrypted_attributes table after saving the model.
      */
-    public function forceDelete(): void
+    public function saveEncryptedAttributes(): void
     {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The forceDelete method can only be called from an Eloquent model instance.');
+        if (
+            !property_exists($this, 'encryptedProperties') ||
+            empty($this->encryptedProperties) ||
+            empty($this->_encryptedAttributesBuffer ?? [])
+        ) {
+            return;
         }
-
-        // Force delete the encrypted attributes using the DnEncryptController
-        $dnEncryptController = app(DnEncryptController::class);
-        $dnEncryptController->forceDeleteEncryptedAttributes($model);
-
-        // Call the parent forceDelete method
-        parent::forceDelete();
+        $dnEncryptController = app(\Wazza\DbEncrypt\Http\Controllers\DbEncryptController::class);
+        $dnEncryptController->setModel($this);
+        foreach ($this->_encryptedAttributesBuffer as $prop => $value) {
+            $this->{$prop} = $value; // restore for encryption
+            $dnEncryptController->encryptProperty($prop);
+        }
+        unset($this->_encryptedAttributesBuffer);
     }
-
 }

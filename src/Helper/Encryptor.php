@@ -22,7 +22,7 @@ final class Encryptor
     private static function getKey(?string $manualKey = null): string
     {
         // get the key from the config or .env
-        $baseKey = config('wazza-db-encrypt.key');
+        $baseKey = config('db-encrypt.key');
         if (empty($baseKey)) {
             throw new RuntimeException('Encryption key is not set in config or .env.');
         }
