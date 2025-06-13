@@ -5,6 +5,7 @@ namespace Wazza\DbEncrypt\Traits;
 use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
 use Wazza\DbEncrypt\Models\EncryptedAttributes;
 use Wazza\DbEncrypt\Helper\Encryptor;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Include this trait in your model to enable database encryption functionality.
@@ -57,7 +58,11 @@ trait HasEncryptedAttributes
             $dnEncryptController->setModel($this);
             $dnEncryptController->decrypt();
         } catch (\Throwable $e) {
-            // Optionally log or handle decryption errors
+            // Log the error with context, but never log sensitive values
+            Log::error('DB Encrypt: Failed to decrypt attributes for model ' . get_class($this) . ' (ID: ' . ($this->getKey() ?? 'n/a') . '): ' . $e->getMessage());
+
+            // Optionally, throw a custom exception for the application layer
+            throw new \RuntimeException('Failed to decrypt encrypted attributes for this model. Please check the logs for details.', 0, $e);
         }
     }
 
@@ -102,7 +107,11 @@ trait HasEncryptedAttributes
                 $dnEncryptController->encryptProperty($prop);
             }
         } catch (\Throwable $e) {
-            // Optionally log or handle encryption errors
+            // Log the error with context, but never log sensitive values
+            Log::error('DB Encrypt: Failed to decrypt attributes for model ' . get_class($this) . ' (ID: ' . ($this->getKey() ?? 'n/a') . '): ' . $e->getMessage());
+
+            // Optionally, throw a custom exception for the application layer
+            throw new \RuntimeException('Failed to decrypt encrypted attributes for this model. Please check the logs for details.', 0, $e);
         }
 
         $this->_encryptedAttributesBuffer = [];
