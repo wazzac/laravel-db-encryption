@@ -108,10 +108,10 @@ trait HasEncryptedAttributes
             }
         } catch (\Throwable $e) {
             // Log the error with context, but never log sensitive values
-            Log::error('DB Encrypt: Failed to decrypt attributes for model ' . get_class($this) . ' (ID: ' . ($this->getKey() ?? 'n/a') . '): ' . $e->getMessage());
+            Log::error('DB Encrypt: Failed to encrypt attributes for model ' . get_class($this) . ' (ID: ' . ($this->getKey() ?? 'n/a') . '): ' . $e->getMessage());
 
             // Optionally, throw a custom exception for the application layer
-            throw new \RuntimeException('Failed to decrypt encrypted attributes for this model. Please check the logs for details.', 0, $e);
+            throw new \RuntimeException('Failed to encrypt attributes for this model. Please check the logs for details.', 0, $e);
         }
 
         $this->_encryptedAttributesBuffer = [];
