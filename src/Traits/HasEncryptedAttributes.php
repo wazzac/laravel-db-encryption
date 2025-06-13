@@ -10,6 +10,7 @@ use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
  * Note: You do NOT need to override the save() method or manually call encryptAttributes().
  * Encryption and decryption are handled automatically via model events by this trait.
  * Be sure to add the `encryptedProperties` array to your model to specify which attributes should be encrypted.
+ * If `encryptedProperties` is not defined, no attributes will be encrypted.
  */
 trait HasEncryptedAttributes
 {
@@ -21,29 +22,11 @@ trait HasEncryptedAttributes
     protected array $_encryptedAttributesBuffer = [];
 
     /**
-     * Get the encryption status of the model's attributes.
-     *
-     * @return bool
-     */
-    public function isEncrypted(): bool
-    {
-        // Get the current model instance the trait is called from
-        $model = $this;
-
-        if (!$model instanceof \Illuminate\Database\Eloquent\Model) {
-            throw new \InvalidArgumentException('The isEncrypted method can only be called from an Eloquent model instance.');
-        }
-
-        // Check if the model's attributes are encrypted
-        $dnEncryptController = app(DbEncryptController::class);
-        return $dnEncryptController->isEncrypted($model);
-    }
-
-    /**
      * Boot the HasEncryptedAttributes trait for a model.
-     * Automatically handles loading and saving encrypted attributes.
+     *
+     * @return void
      */
-    public static function bootHasEncryptedAttributes()
+    public static function bootHasEncryptedAttributes(): void
     {
         static::retrieved(function ($model) {
             $model->loadEncryptedAttributes();
@@ -58,27 +41,37 @@ trait HasEncryptedAttributes
 
     /**
      * Load and decrypt encrypted attributes from the encrypted_attributes table.
+     *
+     * @return void
      */
     public function loadEncryptedAttributes(): void
     {
-        if (!property_exists($this, 'encryptedProperties') || empty($this->encryptedProperties)) {
+        if (empty($this->encryptedProperties ?? [])) {
             return;
         }
-        $dnEncryptController = app(\Wazza\DbEncrypt\Http\Controllers\DbEncryptController::class);
-        $dnEncryptController->setModel($this);
-        $dnEncryptController->decrypt();
+
+        try {
+            $dnEncryptController = app(DbEncryptController::class);
+            $dnEncryptController->setModel($this);
+            $dnEncryptController->decrypt();
+        } catch (\Throwable $e) {
+            // Optionally log or handle decryption errors
+        }
     }
 
     /**
      * Remove encrypted attributes from the model's attributes before saving.
-     * Store them temporarily for later encryption.
+     *
+     * @return void
      */
     public function extractEncryptedAttributesForSave(): void
     {
-        if (!property_exists($this, 'encryptedProperties') || empty($this->encryptedProperties)) {
+        if (empty($this->encryptedProperties ?? [])) {
             return;
         }
+
         $this->_encryptedAttributesBuffer = [];
+
         foreach ($this->encryptedProperties as $prop) {
             if (array_key_exists($prop, $this->attributes)) {
                 $this->_encryptedAttributesBuffer[$prop] = $this->attributes[$prop];
@@ -88,23 +81,28 @@ trait HasEncryptedAttributes
     }
 
     /**
-     * Encrypt and save the encrypted attributes to the encrypted_attributes table after saving the model.
+     * Encrypt and save the encrypted attributes after saving the model.
+     *
+     * @return void
      */
     public function saveEncryptedAttributes(): void
     {
-        if (
-            !property_exists($this, 'encryptedProperties') ||
-            empty($this->encryptedProperties) ||
-            empty($this->_encryptedAttributesBuffer ?? [])
-        ) {
+        if (empty($this->encryptedProperties ?? []) || empty($this->_encryptedAttributesBuffer)) {
             return;
         }
-        $dnEncryptController = app(\Wazza\DbEncrypt\Http\Controllers\DbEncryptController::class);
-        $dnEncryptController->setModel($this);
-        foreach ($this->_encryptedAttributesBuffer as $prop => $value) {
-            $this->{$prop} = $value; // restore for encryption
-            $dnEncryptController->encryptProperty($prop);
+
+        try {
+            $dnEncryptController = app(DbEncryptController::class);
+            $dnEncryptController->setModel($this);
+
+            foreach ($this->_encryptedAttributesBuffer as $prop => $value) {
+                $this->{$prop} = $value;
+                $dnEncryptController->encryptProperty($prop);
+            }
+        } catch (\Throwable $e) {
+            // Optionally log or handle encryption errors
         }
-        unset($this->_encryptedAttributesBuffer);
+
+        $this->_encryptedAttributesBuffer = [];
     }
 }

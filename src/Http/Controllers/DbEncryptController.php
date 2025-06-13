@@ -181,58 +181,66 @@ class DbEncryptController extends BaseController
      * Encrypt all of the model defined ($this->encryptedProperties) properties.
      * If $property is provided, only that property will be encrypted.
      *
-     * @param mixed $property The property to encrypt. If null, all properties will be encrypted.
+     * @param string|null $property The property to encrypt. If null, all properties will be encrypted.
      * @return void
      * @throws Exception
      */
     public function encrypt(
-        $property = null
+        ?string $property = null
     ) {
+        // check if the model is set
         if (!$this->isModelDefined()) {
             throw new Exception('Model is not set. Please set the model using the `setModel` method.');
         }
+
+        // if property is defined, make sure it is in the encrypted properties
         if ($property !== null && !in_array($property, $this->encryptedProperties, true)) {
             throw new Exception('Property `' . $property . '` is not defined in the encrypted properties.');
         }
         $this->logger->infoLow('Encrypting properties for model: ' . $this->model->getTable() . ', property: ' . ($property ?? 'all'));
+
+        // loop through the defined encrypted properties
         foreach ($this->encryptedProperties as $prop) {
+            // check if the property is defined in the model's attributes
             if ($property === null || $prop === $property) {
-                if (array_key_exists($prop, $this->model->getAttributes())) {
-                    // Use Eloquent attribute check
-                    $value = $this->model->{$prop};
-                    if ($value === null || $value === '') {
-                        // if the value was encrypted, hard delete it form the encrypted_attributes table
-                        EncryptedAttributes::where([
-                            'object_type' => $this->model->getTable(),
-                            'object_id' => $this->model->getKey(),
-                            'attribute' => $prop,
-                        ])->delete();
-
-                        // done
-                        continue;
-                    }
-
-                    // Encrypt the value and store it in the encrypted_attributes table
-                    $encryptedValue = Encryptor::encrypt($value);
-                    EncryptedAttributes::updateOrCreate(
-                        [
-                            'object_type' => $this->model->getTable(),
-                            'object_id' => $this->model->getKey(),
-                            'attribute' => $prop,
-                        ],
-                        [
-                            'hash_index' => Encryptor::hash($value),
-                            'encrypted_value' => $encryptedValue,
-                        ]
-                    );
-
-                    // Do NOT log the actual value
-                    $this->logger->infoLow('Encrypted property: ' . $prop . ' [value hidden for security]');
-                } else {
+                if (!array_key_exists($prop, $this->model->getAttributes())) {
                     continue;
                 }
+
+                // Use Eloquent attribute check
+                $value = $this->model->{$prop};
+                if ($value === null || $value === '') {
+                    // if the value was encrypted, hard delete it form the encrypted_attributes table
+                    EncryptedAttributes::where([
+                        'object_type' => $this->model->getTable(),
+                        'object_id' => $this->model->getKey(),
+                        'attribute' => $prop,
+                    ])->delete();
+
+                    // done
+                    continue;
+                }
+
+                // Encrypt the value and store it in the encrypted_attributes table
+                $encryptedValue = Encryptor::encrypt($value);
+                EncryptedAttributes::updateOrCreate(
+                    [
+                        'object_type' => $this->model->getTable(),
+                        'object_id' => $this->model->getKey(),
+                        'attribute' => $prop,
+                    ],
+                    [
+                        'hash_index' => Encryptor::hash($value),
+                        'encrypted_value' => $encryptedValue,
+                    ]
+                );
+
+                // Do NOT log the actual value
+                $this->logger->infoLow('Encrypted property: ' . $prop . ' [value hidden for security]');
             }
         }
+
+        // done.
         $this->logger->infoLow('Encryption completed for model: ' . $this->model->getTable() . ', properties: ' . json_encode($this->encryptedProperties));
     }
 
@@ -246,30 +254,45 @@ class DbEncryptController extends BaseController
      */
     public function decrypt($property = null)
     {
+        // check if the model is set
         if (!$this->isModelDefined()) {
             throw new Exception('Model is not set. Please set the model using the `setModel` method.');
         }
+
+        // if property is defined, make sure it is in the encrypted properties
         if ($property !== null && !in_array($property, $this->encryptedProperties, true)) {
             throw new Exception('Property `' . $property . '` is not defined in the encrypted properties.');
         }
         $this->logger->infoLow('Decrypting properties for model: ' . $this->model->getTable() . ', property: ' . ($property ?? 'all'));
+
+        // loop through the defined encrypted properties
         foreach ($this->encryptedProperties as $prop) {
+            // check if the property is defined in the model's attributes
             if ($property === null || $prop === $property) {
+                // get the encrypted attribute from the database
                 $encryptedAttribute = EncryptedAttributes::where([
                     'object_type' => $this->model->getTable(),
                     'object_id' => $this->model->getKey(),
                     'attribute' => $prop,
                 ])->first();
+
+                // if located, decrypt the value and set it to the model's property
                 if ($encryptedAttribute && $encryptedAttribute->encrypted_value) {
+                    // located, decrypt the value
                     $decryptedValue = Encryptor::decrypt($encryptedAttribute->encrypted_value);
                     $this->model->{$prop} = $decryptedValue;
                     $this->logger->infoLow('Decrypted property: ' . $prop . ' - success.');
                 } else {
+                    // not found, set the property to null
                     $this->model->{$prop} = null;
                     $this->logger->infoLow('Decrypted property: ' . $prop . ' - not found, set to null.');
                 }
+
+                // ..next
             }
         }
+
+        // done.
         $this->logger->infoLow('Decryption completed for model: ' . $this->model->getTable() . ', properties: ' . json_encode($this->encryptedProperties));
     }
 }
