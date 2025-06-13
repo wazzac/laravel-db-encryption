@@ -15,16 +15,11 @@ class EncryptedAttributesFactory extends Factory
     public function definition(): array
     {
         return [
-            'entity_id' => null,
-            'state_id' => null,
-            'type' => $this->faker->randomElement(['physical', 'billing', 'postal']),
-            'building_name' => $this->faker->word(),
-            'floor_number' => $this->faker->word(),
-            'address1' => $this->faker->streetAddress(),
-            'address2' => $this->faker->secondaryAddress(),
-            'city' => $this->faker->city(),
-            'postcode' => $this->faker->postcode(),
-            'comments' => $this->faker->text(2000),
+            'object_type' => $this->faker->randomElement(['type1', 'type2', 'type3']),
+            'object_id' => $this->faker->numberBetween(1, 1000),
+            'attribute' => $this->faker->word(),
+            'hash_index' => $this->faker->sha256(),
+            'encrypted_value' => $this->faker->text(200),
         ];
     }
 }
