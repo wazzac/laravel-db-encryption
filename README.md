@@ -92,6 +92,24 @@ This uses the SHA-256 hash of the value and joins the `encrypted_attributes` tab
 - Run the test suite using Pest:
   ```sh
   ./vendor/bin/pest
+
+  PASS  Tests\Unit\EncryptorTest
+  ✓ it correctly hashes the value                                         0.40s
+  ✓ it correctly encrypts and decrypts data                               0.15s
+  ✓ it returns different ciphertext for same plaintext (random IV)        0.12s
+  ✓ it throws on null input for encrypt                                   0.13s
+  ✓ it throws on null input for decrypt                                   0.13s
+  ✓ it throws on invalid base64 for decrypt                               0.14s
+  ✓ it throws on missing key in config                                    0.19s
+
+   PASS  Tests\Unit\ExampleTest
+  ✓ that true is true                                                     0.28s
+
+   PASS  Tests\Feature\ExampleTest
+  ✓ it contains a successful example feature test                         0.18s
+
+  Tests:    9 passed (9 assertions)
+  Duration: 1.98s
   ```
 - Ensure your models and encrypted attributes behave as expected.
 
