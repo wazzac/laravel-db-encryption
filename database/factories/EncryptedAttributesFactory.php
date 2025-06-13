@@ -4,6 +4,7 @@ namespace Wazza\DbEncrypt\Database\Factories;
 
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Wazza\DbEncrypt\Helper\Encryptor;
 
 class EncryptedAttributesFactory extends Factory
 {
@@ -14,17 +15,17 @@ class EncryptedAttributesFactory extends Factory
      */
     public function definition(): array
     {
+        $randomText = $this->faker->text(50);
+        $encryptedText = Encryptor::encrypt($randomText);
+        $hashIndex = Encryptor::hash($randomText);
         return [
-            'entity_id' => null,
-            'state_id' => null,
-            'type' => $this->faker->randomElement(['physical', 'billing', 'postal']),
-            'building_name' => $this->faker->word(),
-            'floor_number' => $this->faker->word(),
-            'address1' => $this->faker->streetAddress(),
-            'address2' => $this->faker->secondaryAddress(),
-            'city' => $this->faker->city(),
-            'postcode' => $this->faker->postcode(),
-            'comments' => $this->faker->text(2000),
+            'object_type' => 'users',
+            'object_id' => $this->faker->randomNumber(5),
+            'attribute' => $this->faker->randomElement(['social_security_number', 'private_note', 'custom_field']),
+            'hash_index' => $hashIndex,
+            'encrypted_value' => $encryptedText,
+            'created_at' => now(),
+            'updated_at' => now(),
         ];
     }
 }
