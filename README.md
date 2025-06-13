@@ -7,6 +7,7 @@ A Laravel package for secure, transparent encryption and decryption of sensitive
 - Encrypted data is stored in a separate `encrypted_attributes` table
 - Only non-table attributes can be encrypted (enforced at runtime)
 - Automatic loading and saving of encrypted attributes using Eloquent events
+- **Search/filter on encrypted properties using SHA-256 hash**
 - No sensitive values are ever logged
 - Easy integration: just add the trait and define `$encryptedProperties` in your model
 - Compatible with Laravel 9+
@@ -21,6 +22,7 @@ A Laravel package for secure, transparent encryption and decryption of sensitive
 2. Define a public array property `$encryptedProperties` listing the attributes you want encrypted (these must NOT exist as columns in the model's table).
 3. When you load a model, encrypted attributes are automatically decrypted and available as normal properties.
 4. When you save a model, encrypted attributes are removed from the main table and securely stored in the `encrypted_attributes` table.
+5. **You can filter/search on encrypted properties using the provided query scope.**
 
 **Example Model:**
 ```php
@@ -53,6 +55,16 @@ $user = User::find(1);
 echo $user->social_security_number; // '123-45-6789'
 ```
 - If you try to add an attribute to `$encryptedProperties` that already exists as a column, an exception will be thrown.
+
+### Filtering/Search on Encrypted Properties
+You can filter or search for models by encrypted property value using the built-in query scope:
+
+```php
+// Find users with a specific social security number
+$users = User::whereEncrypted('social_security_number', '123-45-6789')->get();
+```
+
+This uses the SHA-256 hash of the value and joins the `encrypted_attributes` table for efficient searching, without ever exposing the decrypted value in the query or logs.
 
 ## Installation Steps
 1. Require the package in your Laravel project:

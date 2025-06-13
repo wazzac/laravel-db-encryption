@@ -3,6 +3,8 @@
 namespace Wazza\DbEncrypt\Traits;
 
 use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
+use Wazza\DbEncrypt\Models\EncryptedAttributes;
+use Wazza\DbEncrypt\Helper\Encryptor;
 
 /**
  * Include this trait in your model to enable database encryption functionality.
@@ -104,5 +106,36 @@ trait HasEncryptedAttributes
         }
 
         $this->_encryptedAttributesBuffer = [];
+    }
+
+    /**
+     * Scope a query to filter by an encrypted property.
+     * Example: $users = User::whereEncrypted('social_security_number', '123-45-6789')->get();
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $attribute
+     * @param string $value
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWhereEncrypted($query, string $attribute, string $value)
+    {
+        $hash = Encryptor::hash($value);
+
+        return $query->whereHas('encryptedAttributesRelation', function ($q) use ($attribute, $hash) {
+            $q->where('attribute', $attribute)
+                ->where('hash_index', $hash);
+        });
+    }
+
+    /**
+     * Define a relationship to the encrypted_attributes table.
+     */
+    public function encryptedAttributesRelation()
+    {
+        return $this->hasMany(
+            EncryptedAttributes::class,
+            'object_id',
+            $this->getKeyName()
+        )->where('object_type', $this->getTable());
     }
 }
