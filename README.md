@@ -10,11 +10,11 @@ A Laravel package for secure, transparent encryption and decryption of sensitive
 - **Search/filter on encrypted properties using SHA-256 hash**
 - No sensitive values are ever logged
 - Easy integration: just add the trait and define `$encryptedProperties` in your model
-- Compatible with Laravel 9+
+- Compatible with Laravel 12
 
 ## Requirements
-- PHP 8.1+
-- Laravel 9 or higher
+- PHP 8.2+
+- Laravel 12
 - OpenSSL PHP extension
 
 ## How It Works
