@@ -1,3 +1,10 @@
+<p align="center">
+    <a href="https://github.com/wazzac/laravel-db-encryption/issues"><img alt="GitHub issues" src="https://img.shields.io/github/issues/wazzac/laravel-db-encryption"></a>
+    <a href="https://github.com/wazzac/laravel-db-encryption/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/wazzac/laravel-db-encryption"></a>
+    <a href="https://github.com/wazzac/laravel-db-encryption/blob/main/LICENSE"><img alt="GitHub license" src="https://img.shields.io/github/license/wazzac/laravel-db-encryption"></a>
+    <a href="https://github.com/wazzac/laravel-db-encryption"><img alt="GitHub version" src="https://img.shields.io/github/v/tag/wazzac/laravel-db-encryption?label=version&sort=semver"></a>
+</p>
+
 # Laravel DB Encryptor
 
 A Laravel package for secure, transparent encryption and decryption of sensitive model attributes, storing them in a dedicated table while keeping your main tables clean and fast.
