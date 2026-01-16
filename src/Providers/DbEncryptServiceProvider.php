@@ -9,7 +9,7 @@ class DbEncryptServiceProvider extends BaseServiceProvider
 {
     /**
      * Bootstrap services.
-     * Allows us to run: // php artisan vendor:publish --tag=db-encrypt-config
+     * Allows us to run: php artisan vendor:publish --tag=db-encrypt-config
      */
     public function boot(): void
     {
@@ -25,6 +25,15 @@ class DbEncryptServiceProvider extends BaseServiceProvider
 
         // Load the migrations
         $this->loadMigrationsFrom($this->dbMigrationsPath());
+
+        // Register Artisan commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Wazza\DbEncrypt\Console\Commands\GenerateKeyCommand::class,
+                \Wazza\DbEncrypt\Console\Commands\ReEncryptCommand::class,
+                \Wazza\DbEncrypt\Console\Commands\PruneCommand::class,
+            ]);
+        }
     }
 
     /**
@@ -41,6 +50,11 @@ class DbEncryptServiceProvider extends BaseServiceProvider
         // Register the singleton service the package provides.
         $this->app->singleton(DbEncryptController::class, function () {
             return new DbEncryptController();
+        });
+
+        // Register the Encryptor as a singleton for the facade
+        $this->app->singleton('db-encrypt', function () {
+            return new \Wazza\DbEncrypt\Helper\Encryptor();
         });
 
         /*
@@ -60,6 +74,11 @@ class DbEncryptServiceProvider extends BaseServiceProvider
         $this->app->bind('some.service', function ($app) {
             return new SomeService();
         });
+
+        For direct encryption/decryption you can use the facade:
+        use Wazza\DbEncrypt\Facades\DbEncrypt;
+        $encrypted = DbEncrypt::encrypt('sensitive data');
+        $decrypted = DbEncrypt::decrypt($encrypted);
         */
     }
 

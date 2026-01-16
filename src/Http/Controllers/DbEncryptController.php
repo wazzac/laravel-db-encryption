@@ -5,12 +5,9 @@ namespace Wazza\DbEncrypt\Http\Controllers;
 use Wazza\DbEncrypt\Http\Controllers\BaseController;
 use Wazza\DbEncrypt\Models\EncryptedAttributes;
 use Wazza\DbEncrypt\Helper\Encryptor;
-use Illuminate\Support\Facades\App;
+use Wazza\DbEncrypt\Exceptions\InvalidAttributeException;
+use Wazza\DbEncrypt\Exceptions\ModelNotSetException;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Contracts\Container\BindingResolutionException;
-use Psr\Container\NotFoundExceptionInterface;
-use Psr\Container\ContainerExceptionInterface;
-use Exception;
 
 /**
  * DB Encrypt / Decrypt Controller
@@ -42,13 +39,10 @@ class DbEncryptController extends BaseController
     private $encryptedProperties = [];
 
     /**
-     * Create a new CrmController instance and define the log identifier (blank will create a new one)
+     * Create a new DbEncryptController instance and define the log identifier (blank will create a new one)
      *
      * @param string|null $logIdentifier
      * @return void
-     * @throws BindingResolutionException
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
      */
     public function __construct(?string $logIdentifier = null)
     {
@@ -88,6 +82,7 @@ class DbEncryptController extends BaseController
      *
      * @param array $propertyMapping
      * @return $this
+     * @throws InvalidAttributeException
      */
     public function setEncryptedProperties(array $propertyMapping = []): self
     {
@@ -97,7 +92,7 @@ class DbEncryptController extends BaseController
         if ($table && $schema) {
             foreach ($propertyMapping as $prop) {
                 if ($schema->hasColumn($table, $prop)) {
-                    throw new Exception("Cannot specify encrypted property '{$prop}' because it already exists as a column in the model's table '{$table}'.");
+                    throw InvalidAttributeException::columnConflict($prop, $table);
                 }
             }
         }
@@ -145,13 +140,13 @@ class DbEncryptController extends BaseController
      * This method will encrypt all properties defined in the model's encrypted properties.
      *
      * @return void
-     * @throws Exception
+     * @throws ModelNotSetException
      */
     public function encryptAll()
     {
         // check if the model is set
         if (!$this->isModelDefined()) {
-            throw new Exception('Model is not set. Please set the model using the `setModel` method.');
+            throw ModelNotSetException::required();
         }
 
         // encrypt all properties
@@ -164,13 +159,13 @@ class DbEncryptController extends BaseController
      *
      * @param string $property
      * @return void
-     * @throws Exception
+     * @throws ModelNotSetException
      */
     public function encryptProperty(string $property)
     {
         // check if the model is set
         if (!$this->isModelDefined()) {
-            throw new Exception('Model is not set. Please set the model using the `setModel` method.');
+            throw ModelNotSetException::required();
         }
 
         // encrypt the property
@@ -183,19 +178,20 @@ class DbEncryptController extends BaseController
      *
      * @param string|null $property The property to encrypt. If null, all properties will be encrypted.
      * @return void
-     * @throws Exception
+     * @throws ModelNotSetException
+     * @throws InvalidAttributeException
      */
     public function encrypt(
         ?string $property = null
     ) {
         // check if the model is set
         if (!$this->isModelDefined()) {
-            throw new Exception('Model is not set. Please set the model using the `setModel` method.');
+            throw ModelNotSetException::required();
         }
 
         // if property is defined, make sure it is in the encrypted properties
         if ($property !== null && !in_array($property, $this->encryptedProperties, true)) {
-            throw new Exception('Property `' . $property . '` is not defined in the encrypted properties.');
+            throw InvalidAttributeException::undefinedProperty($property);
         }
         $this->logger->infoLow('Encrypting properties for model: ' . $this->model->getTable() . ', property: ' . ($property ?? 'all'));
 
@@ -250,18 +246,19 @@ class DbEncryptController extends BaseController
      *
      * @param mixed $property The property to decrypt. If null, all properties will be decrypted.
      * @return void
-     * @throws Exception
+     * @throws ModelNotSetException
+     * @throws InvalidAttributeException
      */
     public function decrypt($property = null)
     {
         // check if the model is set
         if (!$this->isModelDefined()) {
-            throw new Exception('Model is not set. Please set the model using the `setModel` method.');
+            throw ModelNotSetException::required();
         }
 
         // if property is defined, make sure it is in the encrypted properties
         if ($property !== null && !in_array($property, $this->encryptedProperties, true)) {
-            throw new Exception('Property `' . $property . '` is not defined in the encrypted properties.');
+            throw InvalidAttributeException::undefinedProperty($property);
         }
         $this->logger->infoLow('Decrypting properties for model: ' . $this->model->getTable() . ', property: ' . ($property ?? 'all'));
 

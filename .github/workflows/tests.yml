@@ -1,0 +1,78 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop/** ]
+  pull_request:
+    branches: [ main, develop/** ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        php: [8.2, 8.3]
+        laravel: [12.*]
+        dependency-version: [prefer-stable]
+        include:
+          - laravel: 12.*
+            testbench: 10.*
+
+    name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, openssl
+          coverage: none
+
+      - name: Setup problem matchers
+        run: |
+          echo "::add-matcher::${{ runner.tool_cache }}/php.json"
+          echo "::add-matcher::${{ runner.tool_cache }}/phpunit.json"
+
+      - name: Install dependencies
+        run: |
+          composer require "laravel/framework:${{ matrix.laravel }}" "orchestra/testbench:${{ matrix.testbench }}" --no-interaction --no-update
+          composer update --${{ matrix.dependency-version }} --prefer-dist --no-interaction
+
+      - name: List Installed Dependencies
+        run: composer show -D
+
+      - name: Execute tests
+        run: vendor/bin/pest
+        env:
+          DB_ENCRYPT_KEY: 'dGVzdC1lbmNyeXB0aW9uLWtleS1mb3ItdGVzdGluZw=='
+
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.3
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction
+
+      - name: Check code style
+        run: |
+          if [ -f "vendor/bin/phpcs" ]; then
+            vendor/bin/phpcs --standard=PSR12 src/
+          else
+            echo "PHP_CodeSniffer not installed, skipping..."
+          fi
