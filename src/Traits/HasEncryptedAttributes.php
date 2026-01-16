@@ -5,6 +5,7 @@ namespace Wazza\DbEncrypt\Traits;
 use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
 use Wazza\DbEncrypt\Models\EncryptedAttributes;
 use Wazza\DbEncrypt\Helper\Encryptor;
+use Wazza\DbEncrypt\Exceptions\InvalidAttributeException;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -28,9 +29,15 @@ trait HasEncryptedAttributes
      * Boot the HasEncryptedAttributes trait for a model.
      *
      * @return void
+     * @throws InvalidAttributeException
      */
     public static function bootHasEncryptedAttributes(): void
     {
+        // Validate encrypted properties on model initialization
+        static::creating(function ($model) {
+            $model->validateEncryptedProperties();
+        });
+
         static::retrieved(function ($model) {
             $model->loadEncryptedAttributes();
         });
@@ -40,6 +47,28 @@ trait HasEncryptedAttributes
         static::saved(function ($model) {
             $model->saveEncryptedAttributes();
         });
+    }
+
+    /**
+     * Validate that encrypted properties don't conflict with table columns.
+     *
+     * @return void
+     * @throws InvalidAttributeException
+     */
+    protected function validateEncryptedProperties(): void
+    {
+        if (empty($this->encryptedProperties ?? [])) {
+            return;
+        }
+
+        $table = $this->getTable();
+        $schema = $this->getConnection()->getSchemaBuilder();
+
+        foreach ($this->encryptedProperties as $property) {
+            if ($schema->hasColumn($table, $property)) {
+                throw InvalidAttributeException::columnConflict($property, $table);
+            }
+        }
     }
 
     /**
