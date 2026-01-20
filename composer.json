@@ -1,20 +1,32 @@
 {
     "name": "wazza/laravel-db-encryption",
-    "description": "A Laravel package that helps encrypt & decrypt certain defined table columns ensuring the data is secure in the database but can be accessed by the models.",
+    "description": "Production-ready Laravel package for secure, transparent encryption of sensitive model attributes with searchable hash indexes and key rotation support.",
     "type": "library",
     "keywords": [
         "laravel",
         "encryption",
-        "db-encryption",
-        "secure",
-        "package"
+        "database-encryption",
+        "security",
+        "gdpr",
+        "hipaa",
+        "pci-dss",
+        "aes-256",
+        "openssl",
+        "eloquent",
+        "laravel-12"
     ],
     "homepage": "https://www.wazzac.dev",
-    "repository": "https://github.com/wazzac/laravel-db-encryption",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wazzac/laravel-db-encryption"
+    },
     "readme": "README.md",
     "require": {
         "ext-json": "*",
+        "ext-openssl": "*",
         "illuminate/support": "^12.0",
+        "illuminate/database": "^12.0",
+        "illuminate/console": "^12.0",
         "php": "^8.2 || ^8.3"
     },
     "require-dev": {
@@ -54,14 +66,18 @@
         {
             "name": "Warren Coetzee",
             "email": "warren.coetzee@gmail.com",
-            "homepage": "https://www.wazzac.dev"
+            "homepage": "https://www.wazzac.dev",
+            "role": "Developer"
         }
     ],
     "support": {
-        "issues": "https://github.com/wazzacdev/laravel-db-encryption/issues",
-        "source": "https://github.com/wazzacdev/laravel-db-encryption"
+        "issues": "https://github.com/wazzac/laravel-db-encryption/issues",
+        "source": "https://github.com/wazzac/laravel-db-encryption",
+        "docs": "https://github.com/wazzac/laravel-db-encryption/blob/main/README.md"
     },
     "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
         "post-autoload-dump": [
             "@php ./vendor/bin/testbench package:discover --ansi"
         ]
@@ -71,6 +87,8 @@
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
-        }
+        },
+        "sort-packages": true,
+        "optimize-autoloader": true
     }
 }

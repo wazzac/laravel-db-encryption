@@ -1,6 +1,9 @@
 <?php
 
 use Wazza\DbEncrypt\Helper\Encryptor;
+use Wazza\DbEncrypt\Exceptions\InvalidAttributeException;
+use Wazza\DbEncrypt\Exceptions\EncryptionException;
+use Wazza\DbEncrypt\Exceptions\DecryptionException;
 use PHPUnit\Framework\Assert;
 
 it('correctly hashes the value', function () {
@@ -28,17 +31,17 @@ it('returns different ciphertext for same plaintext (random IV)', function () {
 });
 
 it('throws on null input for encrypt', function () {
-    $this->expectException(InvalidArgumentException::class);
+    $this->expectException(InvalidAttributeException::class);
     Encryptor::encrypt(null);
 });
 
 it('throws on null input for decrypt', function () {
-    $this->expectException(InvalidArgumentException::class);
+    $this->expectException(InvalidAttributeException::class);
     Encryptor::decrypt(null);
 });
 
 it('throws on invalid base64 for decrypt', function () {
-    $this->expectException(RuntimeException::class);
+    $this->expectException(DecryptionException::class);
     Encryptor::decrypt('not_base64!');
 });
 
@@ -47,7 +50,7 @@ it('throws on missing key in config', function () {
     $original = config('db-encrypt.key');
     config(['db-encrypt.key' => null]);
     try {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(EncryptionException::class);
         Encryptor::encrypt('test');
     } finally {
         config(['db-encrypt.key' => $original]);

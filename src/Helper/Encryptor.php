@@ -2,8 +2,9 @@
 
 namespace Wazza\DbEncrypt\Helper;
 
-use RuntimeException;
-use InvalidArgumentException;
+use Wazza\DbEncrypt\Exceptions\EncryptionException;
+use Wazza\DbEncrypt\Exceptions\DecryptionException;
+use Wazza\DbEncrypt\Exceptions\InvalidAttributeException;
 
 final class Encryptor
 {
@@ -18,13 +19,14 @@ final class Encryptor
      *
      * @param string|null $manualKey Optional key to customize encryption per record.
      * @return string
+     * @throws EncryptionException
      */
     private static function getKey(?string $manualKey = null): string
     {
         // get the key from the config or .env
         $baseKey = config('db-encrypt.key');
         if (empty($baseKey)) {
-            throw new RuntimeException('Encryption key is not set in config or .env.');
+            throw EncryptionException::missingKey();
         }
 
         // ensure the key is a valid string
@@ -41,12 +43,14 @@ final class Encryptor
      * @param string|null $plainText
      * @param string|null $manualKey
      * @return string
+     * @throws InvalidAttributeException
+     * @throws EncryptionException
      */
     public static function encrypt(?string $plainText, ?string $manualKey = null): string
     {
         // make sure the string to encrypt is not null
         if ($plainText === null) {
-            throw new InvalidArgumentException('String to encrypt cannot be null.');
+            throw InvalidAttributeException::nullInput();
         }
 
         $iv = random_bytes(openssl_cipher_iv_length(self::ENCRYPTION_METHOD));
@@ -60,7 +64,7 @@ final class Encryptor
         );
 
         if ($cipherText === false) {
-            throw new RuntimeException('Encryption failed.');
+            throw EncryptionException::encryptionFailed();
         }
 
         return base64_encode($iv . $cipherText);
@@ -72,18 +76,20 @@ final class Encryptor
      * @param string|null $encoded
      * @param string|null $manualKey
      * @return string
+     * @throws InvalidAttributeException
+     * @throws DecryptionException
      */
     public static function decrypt(?string $encoded, ?string $manualKey = null): string
     {
         // make sure the string to decrypt is not null
         if ($encoded === null) {
-            throw new InvalidArgumentException('String to decrypt cannot be null.');
+            throw InvalidAttributeException::nullInput();
         }
 
         // base64 decode the input
         $decoded = base64_decode(trim($encoded), true);
         if ($decoded === false) {
-            throw new RuntimeException('Base64 decoding failed.');
+            throw DecryptionException::invalidBase64();
         }
 
         $ivLength = openssl_cipher_iv_length(self::ENCRYPTION_METHOD);
@@ -100,7 +106,7 @@ final class Encryptor
         );
 
         if ($plainText === false) {
-            throw new RuntimeException('Decryption failed.');
+            throw DecryptionException::decryptionFailed();
         }
 
         return $plainText;
@@ -118,5 +124,99 @@ final class Encryptor
             self::SEARCH_HASH_ALGORITHM,
             trim($value)
         );
+    }
+
+    /**
+     * Encrypt multiple values in batch for performance.
+     *
+     * @param array $values Associative array where keys are identifiers and values are strings to encrypt
+     * @param string|null $manualKey
+     * @return array Array with same keys but encrypted values
+     * @throws InvalidAttributeException
+     * @throws EncryptionException
+     */
+    public static function encryptBatch(array $values, ?string $manualKey = null): array
+    {
+        $encrypted = [];
+
+        foreach ($values as $key => $value) {
+            if ($value !== null && $value !== '') {
+                $encrypted[$key] = self::encrypt($value, $manualKey);
+            } else {
+                $encrypted[$key] = $value;
+            }
+        }
+
+        return $encrypted;
+    }
+
+    /**
+     * Decrypt multiple values in batch for performance.
+     *
+     * @param array $values Associative array where keys are identifiers and values are encrypted strings
+     * @param string|null $manualKey
+     * @return array Array with same keys but decrypted values
+     * @throws InvalidAttributeException
+     * @throws DecryptionException
+     */
+    public static function decryptBatch(array $values, ?string $manualKey = null): array
+    {
+        $decrypted = [];
+
+        foreach ($values as $key => $value) {
+            if ($value !== null && $value !== '') {
+                $decrypted[$key] = self::decrypt($value, $manualKey);
+            } else {
+                $decrypted[$key] = $value;
+            }
+        }
+
+        return $decrypted;
+    }
+
+    /**
+     * Verify if a plain text value matches an encrypted value.
+     * Useful for comparing without decrypting.
+     *
+     * @param string $plainText
+     * @param string $encryptedValue
+     * @return bool
+     */
+    public static function verify(string $plainText, string $encryptedValue): bool
+    {
+        try {
+            $decrypted = self::decrypt($encryptedValue);
+            return hash_equals($plainText, $decrypted);
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Check if OpenSSL extension is loaded and the cipher method is available.
+     *
+     * @return bool
+     */
+    public static function isSupported(): bool
+    {
+        return extension_loaded('openssl')
+            && in_array(self::ENCRYPTION_METHOD, openssl_get_cipher_methods());
+    }
+
+    /**
+     * Get information about the encryption configuration.
+     *
+     * @return array
+     */
+    public static function getInfo(): array
+    {
+        return [
+            'method' => self::ENCRYPTION_METHOD,
+            'hash_algorithm' => self::ENCRYPTION_HASH_ALGORITHM,
+            'search_hash_algorithm' => self::SEARCH_HASH_ALGORITHM,
+            'iv_length' => openssl_cipher_iv_length(self::ENCRYPTION_METHOD),
+            'supported' => self::isSupported(),
+            'key_configured' => !empty(config('db-encrypt.key')),
+        ];
     }
 }
