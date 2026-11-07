@@ -8,6 +8,12 @@ node_modules/
 
 # Generated files
 .idx/
+.phpunit.cache/
+.phpunit.result.cache
+coverage/
+
+# Environment
+.env
 
 # Composer
 vendor/

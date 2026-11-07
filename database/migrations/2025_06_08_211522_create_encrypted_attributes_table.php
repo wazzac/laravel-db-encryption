@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateEncryptedAttributesTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
@@ -32,7 +32,7 @@ class CreateEncryptedAttributesTable extends Migration
                 $table->unsignedBigInteger('object_id')->nullable()->comment('The local object unique ID (primary key - auto-incremented `int`)');
             }
             $table->string('attribute', 64)->nullable()->comment('The attribute name, e.g. email, phone, etc.');
-            $table->string('hash_index', 64)->nullable()->comment('SHA-256 hash of the attribute value (hex format) for fast searching');
+            $table->string('hash_index', 64)->nullable()->comment('Keyed HMAC-SHA256 of the attribute value (hex format) for fast searching');
             $table->text('encrypted_value')->nullable()->comment('The encrypted value of the attribute (Base64 or binary-safe string)');
             $table->timestamps();
 
@@ -56,4 +56,4 @@ class CreateEncryptedAttributesTable extends Migration
     {
         Schema::dropIfExists('encrypted_attributes');
     }
-}
+};

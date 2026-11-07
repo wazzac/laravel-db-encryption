@@ -38,10 +38,41 @@ return [
     |   - Generate with: php artisan db-encrypt:generate-key
     |   - Keep backups of old keys until re-encryption is complete
     |
-    | If you need to rotate keys, use: php artisan db-encrypt:re-encrypt
-    |
     */
     'key' => env('DB_ENCRYPT_KEY'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Previous Encryption Keys
+    |--------------------------------------------------------------------------
+    |
+    | Old keys, comma separated in the .env file. They are only used to read
+    | existing data and to match search hashes; new data always uses `key`.
+    |
+    | To rotate keys:
+    |   1. php artisan db-encrypt:generate-key --rotate
+    |   2. php artisan db-encrypt:re-encrypt
+    |   3. Remove DB_ENCRYPT_PREVIOUS_KEYS from your .env file
+    |
+    */
+    'previous_keys' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('DB_ENCRYPT_PREVIOUS_KEYS', ''))
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Legacy v1.0 Support
+    |--------------------------------------------------------------------------
+    |
+    | Allows data written by v1.0.x (AES-256-CBC with an unkeyed search hash) to
+    | be read and searched. Run db-encrypt:re-encrypt to upgrade it, then set
+    | this to false: while it is on, an attacker with write access to the
+    | database can submit unauthenticated payloads. db-encrypt:status shows
+    | how many legacy values remain.
+    |
+    */
+    'legacy_support' => env('DB_ENCRYPT_LEGACY_SUPPORT', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -52,25 +83,12 @@ return [
     |
     | primary_key_format: Format of your model primary keys
     |   - 'int' (default): Auto-incrementing integers
-    |   - 'uuid': UUID strings (36 characters)
+    |   - 'uuid': UUID or ULID strings (up to 36 characters)
+    |
+    | Read when the migration runs, and applies to every encrypted model.
     |
     */
     'db' => [
         'primary_key_format' => env('DB_ENCRYPT_DB_PRIMARY_KEY_FORMAT', 'int'),
     ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Performance Configuration (Future Enhancement)
-    |--------------------------------------------------------------------------
-    |
-    | Cache settings for improved performance with frequently accessed
-    | encrypted data. Coming in future releases.
-    |
-    */
-    // 'cache' => [
-    //     'enabled' => env('DB_ENCRYPT_CACHE_ENABLED', false),
-    //     'ttl' => env('DB_ENCRYPT_CACHE_TTL', 3600), // seconds
-    //     'driver' => env('DB_ENCRYPT_CACHE_DRIVER', 'redis'),
-    // ],
 ];

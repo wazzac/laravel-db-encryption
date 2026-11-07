@@ -15,26 +15,26 @@ uses(\Wazza\DbEncrypt\Tests\TestCase::class)->in('Unit', 'Feature');
 
 /*
 |--------------------------------------------------------------------------
-| Expectations
-|--------------------------------------------------------------------------
-|
-| When you're writing tests, you often need to check that values meet certain conditions. The
-| "expect()" function gives you access to a set of "expectations" methods that you can use
-| to assert different things. Of course, you may extend the Expectation API at any time.
-|
-*/
-
-expect()->extend('toBeOne', function () {
-    return $this->toBe(1);
-});
-
-/*
-|--------------------------------------------------------------------------
 | Functions
 |--------------------------------------------------------------------------
-|
-| While Pest is very powerful out-of-the-box, you may have some testing code specific to your
-| project that you don't want to repeat in every file. Here you can also expose helpers as
-| global functions to help you to reduce the number of lines of code in your test files.
-|
 */
+
+/**
+ * Encrypt a value exactly as v1.0.x did. This is a frozen copy of the old format, so that
+ * tests prove data written by v1.0.x stays readable. Do not "fix" or modernize it.
+ */
+function legacyEncrypt(string $plainText, ?string $key = null): string
+{
+    $iv = random_bytes(16);
+    $derivedKey = hash('sha512', $key ?? config('db-encrypt.key'), false);
+
+    return base64_encode($iv . openssl_encrypt($plainText, 'AES-256-CBC', $derivedKey, OPENSSL_RAW_DATA, $iv));
+}
+
+/**
+ * Hash a value exactly as v1.0.x did.
+ */
+function legacyHash(string $value): string
+{
+    return hash('sha256', trim($value));
+}

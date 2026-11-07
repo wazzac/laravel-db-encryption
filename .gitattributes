@@ -1,0 +1,9 @@
+# Leave development files out of the Composer dist archive
+/.env.example export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.gitignore export-ignore
+/AGENTS.md export-ignore
+/CLAUDE.md export-ignore
+/phpunit.xml export-ignore
+/tests export-ignore

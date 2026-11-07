@@ -3,9 +3,8 @@
 namespace Wazza\DbEncrypt\Http\Controllers;
 
 use Wazza\DbEncrypt\Http\Controllers\Logger\LogController;
-use Illuminate\Routing\Controller;
 
-class BaseController extends Controller
+class BaseController
 {
     /**
      * The logger instance

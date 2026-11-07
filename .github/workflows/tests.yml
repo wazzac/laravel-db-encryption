@@ -13,12 +13,18 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        php: [8.2, 8.3]
-        laravel: [12.*]
+        php: ['8.2', '8.3', '8.4', '8.5']
+        laravel: ['12.*', '13.*']
         dependency-version: [prefer-stable]
         include:
-          - laravel: 12.*
-            testbench: 10.*
+          - laravel: '12.*'
+            testbench: '10.*'
+          - laravel: '13.*'
+            testbench: '11.*'
+        exclude:
+          # Laravel 13 requires PHP 8.3 or higher
+          - php: '8.2'
+            laravel: '13.*'
 
     name: PHP ${{ matrix.php }} - Laravel ${{ matrix.laravel }} - ${{ matrix.dependency-version }} - ${{ matrix.os }}
 
@@ -51,9 +57,9 @@ jobs:
         env:
           DB_ENCRYPT_KEY: 'dGVzdC1lbmNyeXB0aW9uLWtleS1mb3ItdGVzdGluZw=='
 
-  code-quality:
+  composer-checks:
     runs-on: ubuntu-latest
-    name: Code Quality Checks
+    name: Composer Checks
 
     steps:
       - name: Checkout code
@@ -62,17 +68,15 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.3
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv
+          # composer.lock is generated on the newest PHP, and needs PHP 8.4 or higher to install
+          php-version: '8.5'
           coverage: none
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-interaction
 
-      - name: Check code style
-        run: |
-          if [ -f "vendor/bin/phpcs" ]; then
-            vendor/bin/phpcs --standard=PSR12 src/
-          else
-            echo "PHP_CodeSniffer not installed, skipping..."
-          fi
+      - name: Check dependencies for security advisories
+        run: composer audit
