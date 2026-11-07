@@ -128,10 +128,10 @@ it('decrypts values encrypted with a previous key and writes with the current ke
 })->throws(DecryptionException::class);
 
 it('reads and searches a frozen vector produced by the real v1.0.0 code', function () {
-    config(['db-encrypt.key' => 'Ky4cw2sqPi0Hm7w0UqYa']);
+    config(['db-encrypt.key' => 'fake-key-for-v1-test-vector']);
 
-    $payload = 'dCv+50acoM+evj5mfEJ6yo9uxw8OaIoEPWtPao1IWgagNkwI7ub/8NOJOY9wGvzq';
-    $manual = 'WObyi8PUxEq/Ba65FW6umsHdc4vAbvvhrUdJv47l+7E=';
+    $payload = 'jk0+9d55NbpuTbtAU1HgXcpyoE2ZRO/LJDFgXsnf55OgJCEPFEecMpMfsOPBiG6t';
+    $manual = 'COQf3eUWvebNWNCqkXghDca6Y4YMFGVub7pQxPNs9Rs=';
     $hash = '484f29a3a1df7fbe4a95d645f8cee03d86238f3d5ebd083014eabe5a218e0570';
 
     expect(Encryptor::decrypt($payload))->toBe('123-45-6789 naïve');
