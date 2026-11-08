@@ -13,43 +13,37 @@
         "aes-256",
         "openssl",
         "eloquent",
-        "laravel-12"
+        "laravel-12",
+        "laravel-13"
     ],
     "homepage": "https://www.wazzac.dev",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/wazzac/laravel-db-encryption"
-    },
     "readme": "README.md",
     "require": {
         "ext-json": "*",
         "ext-openssl": "*",
-        "illuminate/support": "^12.0",
-        "illuminate/database": "^12.0",
-        "illuminate/console": "^12.0",
-        "php": "^8.2 || ^8.3"
+        "illuminate/support": "^12.0 || ^13.0",
+        "illuminate/database": "^12.0 || ^13.0",
+        "illuminate/console": "^12.0 || ^13.0",
+        "php": "^8.2"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.20.0",
-        "laravel/legacy-factories": "~1",
-        "mockery/mockery": "^1.2",
-        "orchestra/testbench": "^10.0",
-        "pestphp/pest": "^3.8",
-        "pestphp/pest-plugin-laravel": "^3.2",
-        "phpunit/phpunit": "^11.0"
+        "fakerphp/faker": "^1.24",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^10.0 || ^11.0",
+        "pestphp/pest": "^3.8 || ^4.0 || ^5.0",
+        "pestphp/pest-plugin-laravel": "^3.2 || ^4.0 || ^5.0",
+        "phpunit/phpunit": "^11.5 || ^12.0 || ^13.0"
     },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Wazza\\DbEncrypt\\": "src/"
+            "Wazza\\DbEncrypt\\": "src/",
+            "Wazza\\DbEncrypt\\Database\\Factories\\": "database/factories/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Wazza\\DbEncrypt\\": "src/",
-            "Wazza\\DbEncrypt\\Tests\\": "tests/",
-            "Wazza\\DbEncrypt\\Database\\Factories\\": "database/factories/",
-            "Wazza\\DbEncrypt\\Database\\Seeders\\": "database/seeders/"
+            "Wazza\\DbEncrypt\\Tests\\": "tests/"
         }
     },
     "extra": {

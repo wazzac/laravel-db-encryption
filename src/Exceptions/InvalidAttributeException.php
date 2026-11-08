@@ -56,4 +56,31 @@ class InvalidAttributeException extends InvalidArgumentException
     {
         return new static('The value to encrypt or decrypt cannot be null.');
     }
+
+    /**
+     * Create an exception for a value that can't be stored as a string.
+     * The message names the attribute only, never the value.
+     *
+     * @param string $attribute
+     * @return static
+     */
+    public static function unsupportedValue(string $attribute): static
+    {
+        return new static(
+            "The value of encrypted attribute '{$attribute}' can't be converted to a string. " .
+            "Add an Eloquent cast (such as 'array') for attributes that hold structured data."
+        );
+    }
+
+    /**
+     * Create an exception for a value too large for the column.
+     *
+     * @param string $attribute
+     * @param int $maxBytes
+     * @return static
+     */
+    public static function valueTooLarge(string $attribute, int $maxBytes): static
+    {
+        return new static("The encrypted value of attribute '{$attribute}' exceeds the {$maxBytes} byte column limit.");
+    }
 }

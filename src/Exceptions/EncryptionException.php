@@ -37,4 +37,16 @@ class EncryptionException extends RuntimeException
     {
         return new static('Failed to encrypt the data. Please check your encryption key and OpenSSL configuration.');
     }
+
+    /**
+     * Create an exception for a model whose attributes could not be stored.
+     *
+     * @param string $modelClass
+     * @param \Throwable $previous
+     * @return static
+     */
+    public static function attributeFailed(string $modelClass, \Throwable $previous): static
+    {
+        return new static("Failed to encrypt attributes for model {$modelClass}. Please check the logs for details.", 0, $previous);
+    }
 }

@@ -27,4 +27,14 @@ class ModelNotSetException extends RuntimeException
     {
         return new static('Model is not set. Please set the model using the setModel() method before performing operations.');
     }
+
+    /**
+     * Create an exception for a model that has no primary key value yet.
+     *
+     * @return static
+     */
+    public static function notPersisted(): static
+    {
+        return new static('The model has no primary key value. Save the model before encrypting its attributes.');
+    }
 }

@@ -3,12 +3,14 @@
 namespace Wazza\DbEncrypt\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+use Wazza\DbEncrypt\Console\Commands\Concerns\ResolvesModelOption;
 use Wazza\DbEncrypt\Models\EncryptedAttributes;
-use Wazza\DbEncrypt\Helper\Encryptor;
 
 class ReEncryptCommand extends Command
 {
+    use ResolvesModelOption;
+
     /**
      * The name and signature of the console command.
      *
@@ -18,14 +20,15 @@ class ReEncryptCommand extends Command
                             {--model= : Specific model class to re-encrypt}
                             {--table= : Specific table to re-encrypt}
                             {--batch=100 : Number of records to process at once}
-                            {--dry-run : Show what would be re-encrypted without actually doing it}';
+                            {--dry-run : Check every record can be decrypted, without changing anything}
+                            {--force : Skip the confirmation prompt}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Re-encrypt all encrypted attributes with a new key (key rotation)';
+    protected $description = 'Re-encrypt all encrypted attributes with the current key and format (key rotation and v1.0 upgrades)';
 
     /**
      * Execute the console command.
@@ -37,21 +40,35 @@ class ReEncryptCommand extends Command
             return self::FAILURE;
         }
 
+        $batchSize = (int) $this->option('batch');
+        if ($batchSize < 1) {
+            $this->error('The --batch option must be a positive integer.');
+            return self::FAILURE;
+        }
+
+        try {
+            $model = $this->resolveModelOption();
+        } catch (InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+            return self::FAILURE;
+        }
+
         $this->info('Starting re-encryption process...');
 
-        if ($this->option('dry-run')) {
+        $dryRun = (bool) $this->option('dry-run');
+        if ($dryRun) {
             $this->warn('DRY RUN MODE - No data will be modified');
         }
 
         $query = EncryptedAttributes::query();
 
-        // Filter by table if specified
-        if ($table = $this->option('table')) {
+        // Filter by model or table if specified
+        if ($table = $model?->getTable() ?? $this->option('table')) {
             $query->where('object_type', $table);
             $this->info("Filtering by table: {$table}");
         }
 
-        $total = $query->count();
+        $total = (clone $query)->count();
 
         if ($total === 0) {
             $this->info('No encrypted attributes found to re-encrypt.');
@@ -60,31 +77,31 @@ class ReEncryptCommand extends Command
 
         $this->info("Found {$total} encrypted attribute(s) to process.");
 
-        if (!$this->option('dry-run') && !$this->confirm('Do you want to proceed with re-encryption?', true)) {
+        if (!$dryRun && !$this->option('force') && !$this->confirm('Do you want to proceed with re-encryption?', true)) {
             $this->comment('Re-encryption cancelled.');
             return self::SUCCESS;
         }
 
-        $batchSize = (int) $this->option('batch');
         $processed = 0;
         $errors = 0;
 
         $bar = $this->output->createProgressBar($total);
         $bar->start();
 
-        $query->chunk($batchSize, function ($records) use (&$processed, &$errors, $bar) {
+        // chunkById, because offset paging is unsafe while the rows are being rewritten
+        $query->chunkById($batchSize, function ($records) use (&$processed, &$errors, $bar, $dryRun) {
             foreach ($records as $record) {
                 try {
-                    if (!$this->option('dry-run')) {
-                        // Decrypt with old key, then encrypt with new key
-                        $decrypted = Encryptor::decrypt($record->encrypted_value);
-                        $encrypted = Encryptor::encrypt($decrypted);
-                        $hash = Encryptor::hash($decrypted);
+                    // Decrypting tries every configured key, and encrypting always uses the current one
+                    $decrypted = $record->decryptValue();
 
-                        $record->update([
-                            'encrypted_value' => $encrypted,
-                            'hash_index' => $hash,
-                        ]);
+                    if (!$dryRun) {
+                        $record->update(EncryptedAttributes::payloadFor(
+                            $record->object_type,
+                            $record->object_id,
+                            $record->attribute,
+                            $decrypted
+                        ));
                     }
 
                     $processed++;
@@ -101,14 +118,14 @@ class ReEncryptCommand extends Command
         $bar->finish();
         $this->newLine(2);
 
-        if ($this->option('dry-run')) {
+        if ($dryRun) {
             $this->info("DRY RUN: Would have processed {$processed} record(s).");
         } else {
             $this->info("Successfully re-encrypted {$processed} record(s).");
         }
 
         if ($errors > 0) {
-            $this->warn("Encountered {$errors} error(s) during re-encryption.");
+            $this->warn("Encountered {$errors} error(s) during re-encryption. Keep DB_ENCRYPT_PREVIOUS_KEYS in place until this is resolved.");
             return self::FAILURE;
         }
 

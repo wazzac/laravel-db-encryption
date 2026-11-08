@@ -5,6 +5,7 @@ namespace Wazza\DbEncrypt\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Wazza\DbEncrypt\Database\Factories\EncryptedAttributesFactory;
+use Wazza\DbEncrypt\Helper\Encryptor;
 
 class EncryptedAttributes extends Model
 {
@@ -40,6 +41,16 @@ class EncryptedAttributes extends Model
     ];
 
     /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array
+     */
+    protected $hidden = [
+        'hash_index',
+        'encrypted_value',
+    ];
+
+    /**
      * Get the validation rules that apply based on the migration schema.
      *
      * @return array<string, \Illuminate\Contracts\Validation\Rule|array|string>
@@ -62,6 +73,37 @@ class EncryptedAttributes extends Model
     // --------------------------------------------
     // Helpers
     // --------------------------------------------
+
+    /**
+     * Build the column values that store a plain text value for one row.
+     *
+     * @param string $type The local object type (table name).
+     * @param int|string $id The local object ID.
+     * @param string $attribute The attribute name.
+     * @param string $plainText The value to store.
+     * @return array{hash_index: string, encrypted_value: string}
+     */
+    public static function payloadFor(string $type, int|string $id, string $attribute, string $plainText): array
+    {
+        return [
+            'hash_index' => Encryptor::hash($plainText, Encryptor::searchContext($type, $attribute)),
+            'encrypted_value' => Encryptor::encrypt($plainText, null, Encryptor::attributeContext($type, $id, $attribute)),
+        ];
+    }
+
+    /**
+     * Decrypt this row's value.
+     *
+     * @return string
+     */
+    public function decryptValue(): string
+    {
+        return Encryptor::decrypt(
+            $this->encrypted_value,
+            null,
+            Encryptor::attributeContext($this->object_type, $this->object_id, $this->attribute)
+        );
+    }
 
     /**
      * Get the encryption record by the local object type, ID, and attribute.
@@ -87,7 +129,7 @@ class EncryptedAttributes extends Model
      *
      * @param string $type The local object type. e.g. 'order', 'user', etc.
      * @param string $attribute The attribute name. e.g. 'email', 'phone', etc.
-     * @param string $hashIndex The SHA-256 hash of the attribute value (hex format).
+     * @param string $hashIndex The search hash, from Encryptor::hash($value, Encryptor::searchContext($type, $attribute)).
      * @return self|null
      */
     public static function viaAttributeHash(

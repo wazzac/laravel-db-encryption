@@ -3,6 +3,7 @@
 namespace Wazza\DbEncrypt\Providers;
 
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
+use Wazza\DbEncrypt\Helper\Encryptor;
 use Wazza\DbEncrypt\Http\Controllers\DbEncryptController;
 
 class DbEncryptServiceProvider extends BaseServiceProvider
@@ -32,6 +33,8 @@ class DbEncryptServiceProvider extends BaseServiceProvider
                 \Wazza\DbEncrypt\Console\Commands\GenerateKeyCommand::class,
                 \Wazza\DbEncrypt\Console\Commands\ReEncryptCommand::class,
                 \Wazza\DbEncrypt\Console\Commands\PruneCommand::class,
+                \Wazza\DbEncrypt\Console\Commands\RenameObjectTypeCommand::class,
+                \Wazza\DbEncrypt\Console\Commands\StatusCommand::class,
             ]);
         }
     }
@@ -47,39 +50,16 @@ class DbEncryptServiceProvider extends BaseServiceProvider
             'db-encrypt'
         );
 
-        // Register the singleton service the package provides.
-        $this->app->singleton(DbEncryptController::class, function () {
+        // The controller holds the current model, so every resolve gets its own instance.
+        // A shared one would keep the last model alive for the life of a queue worker or Octane.
+        $this->app->bind(DbEncryptController::class, function () {
             return new DbEncryptController();
         });
 
         // Register the Encryptor as a singleton for the facade
         $this->app->singleton('db-encrypt', function () {
-            return new \Wazza\DbEncrypt\Helper\Encryptor();
+            return new Encryptor();
         });
-
-        /*
-        You can use the above registered singleton service in your application like this:
-        $dnEncryptController = app(DbEncryptController::class);
-        $dnEncryptController->someMethod();
-
-        You can also use dependency injection in your controllers or other services.
-        For example:
-        public function __construct(DbEncryptController $dnEncryptController)
-        {
-            $this->dnEncryptController = $dnEncryptController;
-        }
-
-        This allows you to access the methods of DbEncryptController within your class.
-        You can also register other services or bindings as needed.
-        $this->app->bind('some.service', function ($app) {
-            return new SomeService();
-        });
-
-        For direct encryption/decryption you can use the facade:
-        use Wazza\DbEncrypt\Facades\DbEncrypt;
-        $encrypted = DbEncrypt::encrypt('sensitive data');
-        $decrypted = DbEncrypt::decrypt($encrypted);
-        */
     }
 
     /**
